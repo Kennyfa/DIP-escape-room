@@ -30,6 +30,9 @@ const meterFill    = document.getElementById("meterFill");
 const canvas = document.getElementById("waveCanvas");
 const ctx = canvas.getContext("2d");
 
+canvas.width = 420;
+canvas.height = 220;
+
 // Max error when each knob is 0..9
 // worst-case per knob difference is 9, so total max is 27
 const maxError = 27;

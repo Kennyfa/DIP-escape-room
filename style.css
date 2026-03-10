@@ -17,22 +17,25 @@ p{
 
 .panel{
   margin-top: 18px;
-  padding: 20px 28px;
+  padding: 18px 16px;
   border: 2px solid #444;
   display: inline-block;
   border-radius: 10px;
+  width: min(92vw, 560px);
+  box-sizing: border-box;
 }
 
 label{
   display: inline-block;
-  width: 90px;
+  width: 72px;
   text-align: left;
+  font-size: 18px;
 }
 
 input[type="range"]{
-  width: 220px;
+  width: min(42vw, 220px);
   vertical-align: middle;
-  margin: 0 10px;
+  margin: 0 8px;
 }
 
 button{
@@ -58,6 +61,18 @@ canvas{
   border-radius: 8px;
 }
 
+#waveCanvas{
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 420 / 220;
+  display: block;
+  background-color: #000;
+  border: 2px solid #444;
+  margin: 18px auto 10px auto;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
 /* Signal meter */
 .meter{
   width: 320px;
@@ -72,6 +87,40 @@ canvas{
 @keyframes jokerGlow {
   from { text-shadow: 0 0 5px #39ff14; }
   to { text-shadow: 0 0 20px #39ff14; }
+}
+
+@media (max-width: 600px){
+  body{
+    padding: 12px 10px 24px 10px;
+  }
+
+  h1{
+    font-size: 2rem;
+    margin-bottom: 12px;
+  }
+
+  .panel{
+    padding: 14px 12px;
+  }
+
+  label{
+    width: 68px;
+    font-size: 16px;
+  }
+
+  input[type="range"]{
+    width: min(40vw, 180px);
+  }
+
+  button{
+    font-size: 15px;
+    padding: 10px 14px;
+  }
+
+  #result{
+    font-size: 1rem;
+    padding: 0 8px;
+  }
 }
 
 .code-glow{
