@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Joker's Final Test</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <h1>Joker's Final Test</h1>
+
+    <p>
+      You want the right answer. <br />
+      But there isn't one. <br />
+      There are only consequences. <br />
+      <br />
+      Tune the chaos and see what you've become.
+    </p>
+
+    <div class="panel">
+      <label>Chaos</label>
+      <input type="range" min="0" max="9" value="0" id="freqSlider" />
+      <span id="freqVal">0</span>
+
+      <br /><br />
+
+      <label>Pressure</label>
+      <input type="range" min="0" max="9" value="0" id="ampSlider" />
+      <span id="ampVal">0</span>
+
+      <br /><br />
+
+      <label>Error</label>
+      <input type="range" min="0" max="9" value="0" id="phaseSlider" />
+      <span id="phaseVal">0</span>
+
+      <br /><br />
+
+      <canvas id="waveCanvas" width="400" height="200"></canvas>
+
+      <p>Chaos Stability</p>
+
+      <div class="meter">
+        <div id="meterFill"></div>
+      </div>
+
+      <p><span id="matchPercent">0%</span></p>
+
+      <button onclick="checkSignal()">Reveal the consequence</button>
+    </div>
+
+    <h2 id="result"></h2>
+
+    <script src="puzzle.js"></script>
+  </body>
+</html>
