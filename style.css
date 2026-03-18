@@ -73,7 +73,9 @@ canvas{
   box-sizing: border-box;
 }
 /* Signal meter */
+
 .meter{
+  display: none;
   width: 320px;
   height: 18px;
   background-color: #333;
@@ -81,6 +83,12 @@ canvas{
   margin: 8px auto 8px auto;
   border-radius: 999px;
   overflow: hidden;
+}
+
+.stability-label,
+.meter,
+#matchPercent {
+  display: none;
 }
 
 @keyframes jokerGlow {

@@ -1,7 +1,5 @@
 // ------------------------------------
-// DEVELOPMENT PLACEHOLDER VALUES
-// Replace these later with outputs from
-// your physical puzzles
+// Outputs from earlier rooms
 // ------------------------------------
 const room1_output = 4;
 const room2_output = 7;
@@ -24,35 +22,183 @@ const freqVal  = document.getElementById("freqVal");
 const ampVal   = document.getElementById("ampVal");
 const phaseVal = document.getElementById("phaseVal");
 
-const matchDisplay = document.getElementById("matchPercent");
-const meterFill    = document.getElementById("meterFill");
-
 const canvas = document.getElementById("waveCanvas");
 const ctx = canvas.getContext("2d");
 
 canvas.width = 420;
 canvas.height = 220;
 
+const result = document.getElementById("result");
+
 // Max error when each knob is 0..9
-// worst-case per knob difference is 9, so total max is 27
 const maxError = 27;
 
-//Define result
-const result = document.getElementById("result");
+// ------------------------------------
+// Audio system
+// ------------------------------------
+let audioCtx = null;
+let oscillator = null;
+let gainNode = null;
+let currentAudioState = "";
+let audioStarted = false;
+let successTimeout = null;
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+
+function startTone(freq, type = "sine", volume = 0.02) {
+  if (!audioCtx) return;
+
+  stopTone();
+
+  oscillator = audioCtx.createOscillator();
+  gainNode = audioCtx.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.value = freq;
+  gainNode.gain.value = volume;
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+
+  oscillator.start();
+}
+
+function stopTone() {
+  if (oscillator) {
+    oscillator.stop();
+    oscillator.disconnect();
+    oscillator = null;
+  }
+
+  if (gainNode) {
+    gainNode.disconnect();
+    gainNode = null;
+  }
+}
+
+function playSuccessChime() {
+  if (!audioCtx) return;
+
+  stopTone();
+
+  const osc1 = audioCtx.createOscillator();
+  const gain1 = audioCtx.createGain();
+  osc1.type = "sine";
+  osc1.frequency.value = 880;
+  gain1.gain.value = 0.025;
+  osc1.connect(gain1);
+  gain1.connect(audioCtx.destination);
+  osc1.start();
+  osc1.stop(audioCtx.currentTime + 0.15);
+
+  const osc2 = audioCtx.createOscillator();
+  const gain2 = audioCtx.createGain();
+  osc2.type = "sine";
+  osc2.frequency.value = 1320;
+  gain2.gain.value = 0.025;
+  osc2.connect(gain2);
+  gain2.connect(audioCtx.destination);
+  osc2.start(audioCtx.currentTime + 0.16);
+  osc2.stop(audioCtx.currentTime + 0.35);
+}
+
+function updateAudioFromError(error) {
+  if (!audioCtx) return;
+
+  if (error === 0) {
+    if (currentAudioState !== "success") {
+      currentAudioState = "success";
+      playSuccessChime();
+    }
+    return;
+  }
+
+  let state = "";
+  let freq = 0;
+  let type = "sine";
+  let volume = 0.02;
+
+  if (error <= 3) {
+    state = "close";
+    freq = 660;
+    type = "sine";
+    volume = 0.018;
+  } else if (error <= 8) {
+    state = "mid";
+    freq = 440;
+    type = "sine";
+    volume = 0.02;
+  } else {
+    state = "far";
+    freq = 220;
+    type = "triangle";
+    volume = 0.02;
+  }
+
+  if (state !== currentAudioState) {
+    currentAudioState = state;
+    startTone(freq, type, volume);
+  }
+}
+
+function getCurrentError() {
+  const f = parseInt(freqSlider.value, 10);
+  const a = parseInt(ampSlider.value, 10);
+  const p = parseInt(phaseSlider.value, 10);
+
+  return (
+    Math.abs(f - targetFrequency) +
+    Math.abs(a - targetAmplitude) +
+    Math.abs(p - targetPhase)
+  );
+}
+
+function unlockAudio() {
+  if (!audioStarted) {
+    initAudio();
+    audioStarted = true;
+  }
+
+  if (audioCtx && audioCtx.state === "suspended") {
+    audioCtx.resume().then(() => {
+      updateAudioFromError(getCurrentError());
+    });
+  } else {
+    updateAudioFromError(getCurrentError());
+  }
+}
+
+document.body.addEventListener("click", unlockAudio, { once: false });
+document.body.addEventListener("touchstart", unlockAudio, { once: false });
 
 // ------------------------------------
 // Event listeners
 // ------------------------------------
-freqSlider.addEventListener("input", updateSignal);
-ampSlider.addEventListener("input", updateSignal);
-phaseSlider.addEventListener("input", updateSignal);
+freqSlider.addEventListener("input", handleSliderInput);
+ampSlider.addEventListener("input", handleSliderInput);
+phaseSlider.addEventListener("input", handleSliderInput);
+
+function handleSliderInput() {
+  unlockAudio();
+  updateSignal();
+}
 
 // ------------------------------------
 // Core update loop
 // ------------------------------------
 function updateSignal() {
   result.style.opacity = "0";
-  
+
+  // Cancel pending success reveal if user starts moving again
+  if (successTimeout) {
+    clearTimeout(successTimeout);
+    successTimeout = null;
+  }
+
   const f = parseInt(freqSlider.value, 10);
   const a = parseInt(ampSlider.value, 10);
   const p = parseInt(phaseSlider.value, 10);
@@ -61,28 +207,12 @@ function updateSignal() {
   ampVal.textContent = a;
   phaseVal.textContent = p;
 
-  // Calculate signal error (your requested formula)
   const error =
     Math.abs(f - targetFrequency) +
     Math.abs(a - targetAmplitude) +
     Math.abs(p - targetPhase);
 
-  // Convert error -> match %
-  const match = Math.max(0, 100 - (error / maxError) * 100);
-
-  // Update UI
-  matchDisplay.textContent = match.toFixed(0) + "%";
-  meterFill.style.width = match + "%";
-
-  if (match > 80) {
-    meterFill.style.backgroundColor = "lime";
-  } else if (match > 40) {
-    meterFill.style.backgroundColor = "orange";
-  } else {
-    meterFill.style.backgroundColor = "red";
-  }
-
-  // Draw waveform with interference that depends on error
+  updateAudioFromError(error);
   drawWave(f, a, p, error);
 }
 
@@ -103,11 +233,11 @@ function checkSignal() {
     result.style.opacity = "1";
     result.innerText = "Signal stabilised...\nDecoding transmission...";
 
-    setTimeout(() => {
+    successTimeout = setTimeout(() => {
       result.innerHTML =
         'See? All it takes is a little push.<br><span class="code-glow">Final Escape Code: 5283</span>';
+      successTimeout = null;
     }, 2000);
-
   } else {
     result.style.opacity = "1";
     result.innerText = "Seems like chaos is not your strong suit.\nTry again.";
@@ -125,6 +255,7 @@ function drawWave(frequency, amplitude, phase, error) {
     return;
   }
 
+  // Center baseline
   ctx.beginPath();
   ctx.moveTo(0, canvas.height / 2);
   ctx.lineTo(canvas.width, canvas.height / 2);
@@ -134,15 +265,15 @@ function drawWave(frequency, amplitude, phase, error) {
 
   const match = Math.max(0, 100 - (error / maxError) * 100);
 
-  let waveColor = "#144444";   // very dim
+  let waveColor = "#144444";
   if (match >= 90) {
-    waveColor = "#00ffff";     // very bright
+    waveColor = "#00ffff";
   } else if (match >= 75) {
-    waveColor = "#00d5d5";     // bright
+    waveColor = "#00d5d5";
   } else if (match >= 50) {
-    waveColor = "#009999";     // medium
+    waveColor = "#009999";
   } else {
-    waveColor = "#144444";     // dim
+    waveColor = "#144444";
   }
 
   ctx.beginPath();
@@ -161,13 +292,13 @@ function drawWave(frequency, amplitude, phase, error) {
       ctx.lineTo(x, y);
     }
   }
-  
+
   if (match >= 90) {
-  ctx.shadowColor = waveColor;
-  ctx.shadowBlur = 8;
+    ctx.shadowColor = waveColor;
+    ctx.shadowBlur = 8;
   } else {
-  ctx.shadowBlur = 0;
-    }
+    ctx.shadowBlur = 0;
+  }
 
   ctx.strokeStyle = waveColor;
   ctx.lineWidth = 2;
@@ -176,8 +307,10 @@ function drawWave(frequency, amplitude, phase, error) {
   ctx.shadowBlur = 0;
 }
 
+// ------------------------------------
+// Joker smile
+// ------------------------------------
 function drawSmile() {
-
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   const centerX = canvas.width / 2;
@@ -187,7 +320,6 @@ function drawSmile() {
   ctx.fillStyle = "#39ff14";
   ctx.lineWidth = 4;
 
-  // Pulse glow strength
   const glow = 8 + Math.sin(smilePulse) * 6;
 
   ctx.shadowColor = "#39ff14";
@@ -210,6 +342,9 @@ function drawSmile() {
   ctx.shadowBlur = 0;
 }
 
+// ------------------------------------
+// Animation loop
+// ------------------------------------
 let phaseShift = 0;
 let smilePulse = 0;
 
@@ -225,7 +360,10 @@ function animate() {
 
   drawWave(f, a, p + phaseShift, error);
 
-  phaseShift += 0.02;
+  // Faster when far, slower when close
+  const speed = 0.005 + error * 0.003;
+  phaseShift += speed;
+
   smilePulse += 0.05;
 
   requestAnimationFrame(animate);
@@ -234,6 +372,6 @@ function animate() {
 animate();
 
 // ------------------------------------
-// Initial render (so it looks alive immediately)
+// Initial render
 // ------------------------------------
 updateSignal();
