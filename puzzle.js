@@ -175,6 +175,7 @@ function unlockAudio() {
 function startExperience() {
   unlockAudio();
   document.getElementById("startupModal").style.display = "none";
+  document.body.classList.remove("modal-open");
 }
 
 document.body.addEventListener("click", unlockAudio, { once: false });
