@@ -172,6 +172,11 @@ function unlockAudio() {
   }
 }
 
+function startExperience() {
+  unlockAudio();
+  document.getElementById("startupModal").style.display = "none";
+}
+
 document.body.addEventListener("click", unlockAudio, { once: false });
 document.body.addEventListener("touchstart", unlockAudio, { once: false });
 
