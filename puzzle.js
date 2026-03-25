@@ -34,6 +34,11 @@ const result = document.getElementById("result");
 const maxError = 27;
 
 // ------------------------------------
+// Player behavior tracking
+// ------------------------------------
+let moveCount = 0;
+
+// ------------------------------------
 // Audio system
 // ------------------------------------
 let audioCtx = null;
@@ -189,6 +194,7 @@ ampSlider.addEventListener("input", handleSliderInput);
 phaseSlider.addEventListener("input", handleSliderInput);
 
 function handleSliderInput() {
+  moveCount++;
   unlockAudio();
   updateSignal();
 }
@@ -199,7 +205,6 @@ function handleSliderInput() {
 function updateSignal() {
   result.style.opacity = "0";
 
-  // Cancel pending success reveal if user starts moving again
   if (successTimeout) {
     clearTimeout(successTimeout);
     successTimeout = null;
@@ -223,25 +228,30 @@ function updateSignal() {
 }
 
 // ------------------------------------
+// Ending logic (move-based)
+// ------------------------------------
+function getEndingMessage() {
+  if (moveCount <= 15) {
+    return 'You kept it controlled.<br>Order obeyed you… for now.<br><span class="code-glow">Final Escape Code: 5283</span>';
+  } else if (moveCount <= 20) {
+    return 'You learned to live with the consequence.<br>That is still a choice.<br><span class="code-glow">Final Escape Code: 5283</span>';
+  } else {
+    return 'You forced order out of chaos.<br>Interesting… brute force has a cost.<br><span class="code-glow">Final Escape Code: 5283</span>';
+  }
+}
+
+// ------------------------------------
 // Button check
 // ------------------------------------
 function checkSignal() {
-  const f = parseInt(freqSlider.value, 10);
-  const a = parseInt(ampSlider.value, 10);
-  const p = parseInt(phaseSlider.value, 10);
-
-  const error =
-    Math.abs(f - targetFrequency) +
-    Math.abs(a - targetAmplitude) +
-    Math.abs(p - targetPhase);
+  const error = getCurrentError();
 
   if (error <= 0) {
     result.style.opacity = "1";
     result.innerText = "Signal stabilised...\nDecoding transmission...";
 
     successTimeout = setTimeout(() => {
-      result.innerHTML =
-        'See? All it takes is a little push.<br><span class="code-glow">Final Escape Code: 5283</span>';
+      result.innerHTML = getEndingMessage();
       successTimeout = null;
     }, 2000);
   } else {
@@ -251,7 +261,7 @@ function checkSignal() {
 }
 
 // ------------------------------------
-// Waveform drawing (with noise)
+// Waveform drawing
 // ------------------------------------
 function drawWave(frequency, amplitude, phase, error) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -261,7 +271,6 @@ function drawWave(frequency, amplitude, phase, error) {
     return;
   }
 
-  // Center baseline
   ctx.beginPath();
   ctx.moveTo(0, canvas.height / 2);
   ctx.lineTo(canvas.width, canvas.height / 2);
@@ -272,15 +281,9 @@ function drawWave(frequency, amplitude, phase, error) {
   const match = Math.max(0, 100 - (error / maxError) * 100);
 
   let waveColor = "#144444";
-  if (match >= 90) {
-    waveColor = "#00ffff";
-  } else if (match >= 75) {
-    waveColor = "#00d5d5";
-  } else if (match >= 50) {
-    waveColor = "#009999";
-  } else {
-    waveColor = "#144444";
-  }
+  if (match >= 90) waveColor = "#00ffff";
+  else if (match >= 75) waveColor = "#00d5d5";
+  else if (match >= 50) waveColor = "#009999";
 
   ctx.beginPath();
 
@@ -292,11 +295,8 @@ function drawWave(frequency, amplitude, phase, error) {
       Math.sin((x / 50) * frequency + phase) * amplitude * 10 +
       noise;
 
-    if (x === 0) {
-      ctx.moveTo(x, y);
-    } else {
-      ctx.lineTo(x, y);
-    }
+    if (x === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
   }
 
   if (match >= 90) {
@@ -331,7 +331,6 @@ function drawSmile() {
   ctx.shadowColor = "#39ff14";
   ctx.shadowBlur = glow;
 
-  // Eyes
   ctx.beginPath();
   ctx.arc(centerX - 40, centerY - 25, 8, 0, 2 * Math.PI);
   ctx.fill();
@@ -340,7 +339,6 @@ function drawSmile() {
   ctx.arc(centerX + 40, centerY - 25, 8, 0, 2 * Math.PI);
   ctx.fill();
 
-  // Mouth
   ctx.beginPath();
   ctx.arc(centerX, centerY + 5, 60, 0.2 * Math.PI, 0.8 * Math.PI);
   ctx.stroke();
@@ -349,35 +347,26 @@ function drawSmile() {
 }
 
 // ------------------------------------
-// Animation loop
+// Animation
 // ------------------------------------
 let phaseShift = 0;
 let smilePulse = 0;
 
 function animate() {
-  const f = parseInt(freqSlider.value, 10);
-  const a = parseInt(ampSlider.value, 10);
-  const p = parseInt(phaseSlider.value, 10);
+  const error = getCurrentError();
 
-  const error =
-    Math.abs(f - targetFrequency) +
-    Math.abs(a - targetAmplitude) +
-    Math.abs(p - targetPhase);
+  drawWave(
+    parseInt(freqSlider.value, 10),
+    parseInt(ampSlider.value, 10),
+    parseInt(phaseSlider.value, 10) + phaseShift,
+    error
+  );
 
-  drawWave(f, a, p + phaseShift, error);
-
-  // Faster when far, slower when close
-  const speed = 0.005 + error * 0.003;
-  phaseShift += speed;
-
+  phaseShift += 0.005 + error * 0.003;
   smilePulse += 0.05;
 
   requestAnimationFrame(animate);
 }
 
 animate();
-
-// ------------------------------------
-// Initial render
-// ------------------------------------
 updateSignal();
